@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0b0d12" />
-  <meta name="description" content="PaperTrade 美股模拟交易练习场" />
-  <title>PaperTrade · 模拟美股</title>
+  <meta name="description" content="PaperTrade 美股模拟交易终端 — 基于可验证行情源的美股模拟下单、限价委托、持仓核算与 K 线分析练习平台" />
+  <title>PaperTrade · 美股模拟交易终端 (US Paper Trading Terminal)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -13,48 +13,708 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar">
-      <a class="brand" href="#" aria-label="PaperTrade 首页"><span class="brand-mark">P</span><span>paper<span class="brand-light">trade</span></span></a>
-      <div class="side-label">工作台</div>
-      <button class="side-link active" data-view="market"><span class="nav-icon">▦</span>市场行情</button>
-      <button class="side-link" data-view="portfolio"><span class="nav-icon">◫</span>我的持仓</button>
-      <button class="side-link" data-view="watchlist"><span class="nav-icon">☆</span>自选列表</button>
-      <div class="side-label side-label-spaced">账户</div>
-      <div class="account-mini"><div class="avatar">PT</div><div><strong>练习账户</strong><small>模拟交易模式</small></div><span class="online-dot"></span></div>
-      <div class="sidebar-foot"><span class="pulse"></span>市场模拟运行中</div>
+    <!-- 左侧桌面导航栏 -->
+    <aside class="sidebar" aria-label="主导航">
+      <a class="brand" href="./" aria-label="PaperTrade 美股终端首页">
+        <span class="brand-mark">P</span>
+        <span>paper<span class="brand-light">trade</span> <em class="brand-market">US</em></span>
+      </a>
+
+      <div class="side-label">交易工作台 · WORKSPACE</div>
+      <button class="side-link active" type="button" data-nav="market">
+        <span class="nav-icon" aria-hidden="true">▦</span>
+        <span>市场行情 <small>Markets</small></span>
+      </button>
+      <button class="side-link" type="button" data-nav="watchlist">
+        <span class="nav-icon" aria-hidden="true">★</span>
+        <span>我的自选 <small>Watchlist</small></span>
+        <span class="nav-pill" id="side-watch-count">0</span>
+      </button>
+      <button class="side-link" type="button" data-nav="portfolio">
+        <span class="nav-icon" aria-hidden="true">◫</span>
+        <span>持仓资产 <small>Positions</small></span>
+        <span class="nav-pill" id="side-pos-count">0</span>
+      </button>
+      <button class="side-link" type="button" data-nav="orders">
+        <span class="nav-icon" aria-hidden="true">≡</span>
+        <span>订单与成交 <small>Orders</small></span>
+        <span class="nav-pill warn" id="side-pending-count" hidden>0</span>
+      </button>
+
+      <div class="side-label side-label-spaced">跨市场练习 · MARKETS</div>
+      <a class="side-link external-market-link" href="ashare/" aria-label="切换到 A 股模拟交易页面">
+        <span class="nav-icon" aria-hidden="true">沪</span>
+        <span>A 股模拟专版 <small>T+1</small></span>
+        <span class="ext-arrow" aria-hidden="true">↗</span>
+      </a>
+
+      <div class="side-label side-label-spaced">模拟账户 · ACCOUNT</div>
+      <div class="account-mini">
+        <div class="avatar" aria-hidden="true">US</div>
+        <div>
+          <strong>美股模拟账户 (USD)</strong>
+          <small id="side-provider-status">未连接行情源</small>
+        </div>
+        <span class="status-dot disconnected" id="side-status-dot" aria-hidden="true"></span>
+      </div>
+
+      <div class="sidebar-foot">
+        <p class="sidebar-disclaimer">学习模拟终端 · 不构成投资建议 · 不连接真实券商</p>
+      </div>
     </aside>
 
+    <!-- 主内容区 -->
     <main class="main-content">
-      <header class="topbar"><div class="mobile-brand"><span class="brand-mark">P</span><b>papertrade</b></div><div class="breadcrumbs">交易终端 <span>/</span> <b id="breadcrumb-view">市场行情</b></div><div class="top-actions"><div class="market-pill"><span class="pulse"></span>模拟市场 <span class="pill-divider"></span><span>NYSE · NASDAQ</span></div><button class="settings-button" id="market-settings" type="button">行情设置</button><button class="icon-button" id="reset-button" title="重置模拟账户" aria-label="重置账户">↻</button><div class="avatar top-avatar">PT</div></div></header>
+      <!-- 顶部全局状态栏 -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <a class="mobile-brand" href="./">
+            <span class="brand-mark">P</span>
+            <b>papertrade</b>
+            <span class="mobile-us-tag">US</span>
+          </a>
+          <div class="breadcrumbs" aria-label="当前位置">
+            <span>美股终端</span>
+            <span class="sep">/</span>
+            <b id="breadcrumb-label">市场行情 (Markets)</b>
+          </div>
+          <a class="topbar-ashare-link" href="ashare/">切换 A 股模拟 ↗</a>
+        </div>
+
+        <div class="topbar-right">
+          <div class="session-pill" id="market-session-pill" title="基于 NYSE / NASDAQ 法定节假日与交易时段日历">
+            <span class="session-dot" id="market-session-dot"></span>
+            <span id="market-session-text">检测市场时段…</span>
+            <span class="pill-divider"></span>
+            <span class="et-clock-wrap">ET <b id="et-clock">--:--:--</b></span>
+          </div>
+
+          <button class="action-btn" id="refresh-quotes-btn" type="button" title="按配额同步当前关注标的报价" aria-label="刷新行情报价">
+            <span aria-hidden="true">⟳</span> <span id="refresh-btn-text">刷新行情</span>
+          </button>
+
+          <button class="action-btn primary-outline" id="open-settings-btn" type="button" aria-haspopup="dialog">
+            <span class="conn-indicator" id="conn-indicator"></span>
+            <span id="settings-btn-text">连接行情源</span>
+          </button>
+
+          <button class="icon-btn" id="open-reset-btn" type="button" title="重置模拟账户" aria-label="重置模拟账户">
+            ↺
+          </button>
+        </div>
+      </header>
 
       <div class="content-wrap">
-        <section class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> PAPER TRADING SIMULATOR</div><h1 id="page-title">早上好，交易员 <span class="wave">✳</span></h1><p class="subhead">用虚拟资金练习交易，熟悉市场节奏。</p></div><div class="date-chip"><span class="calendar-icon">▣</span><span id="today-label">今日市场</span><span class="live-dot"></span></div></section>
-
-        <section class="stats-grid" aria-label="账户概况">
-          <article class="stat-card balance-card"><div class="stat-top"><span class="stat-label">账户总资产</span><span class="stat-icon">◈</span></div><div class="stat-value" id="total-value">$100,000.00</div><div class="stat-bottom"><span class="stat-note">含现金与持仓市值</span><span class="stat-badge positive" id="total-change">+0.00%</span></div><div class="card-glow"></div></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">可用现金</span><span class="stat-icon cash-icon">＄</span></div><div class="stat-value" id="cash-value">$100,000.00</div><div class="stat-bottom"><span class="stat-note">可用于买入股票</span><span class="tiny-arrow">↗</span></div></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">持仓市值</span><span class="stat-icon position-icon">▤</span></div><div class="stat-value" id="invested-value">$0.00</div><div class="stat-bottom"><span class="stat-note">当前持有资产</span><span class="tiny-arrow">↗</span></div></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">累计收益</span><span class="stat-icon profit-icon">⌁</span></div><div class="stat-value" id="profit-value">$0.00</div><div class="stat-bottom"><span class="stat-note">相对初始资金</span><span class="stat-badge positive" id="profit-percent">+0.00%</span></div></article>
-        </section>
-
-        <section class="market-strip"><div class="strip-title"><span class="pulse"></span>市场概览 <small id="market-badge">行情未连接</small></div><div class="ticker-strip" id="ticker-strip"></div><div class="market-time">美东时间 <b id="market-clock">09:30:00</b></div></section>
-
-        <section class="workspace-grid">
-          <div class="panel stocks-panel"><div class="panel-heading"><div><div class="section-kicker">EXPLORE</div><h2>探索股票</h2></div><button class="text-button" id="view-all">查看全部 <span>↗</span></button></div>
-            <div class="toolbar"><div class="tabs" id="stock-tabs"><button class="tab active" data-filter="all">全部</button><button class="tab" data-filter="gainer">涨幅榜</button><button class="tab" data-filter="loser">跌幅榜</button><button class="tab" data-filter="watch">我的自选 <span id="watch-count" class="tab-count">0</span></button></div><label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="搜索股票代码或名称" /><kbd>⌘ K</kbd></label></div>
-            <div class="table-wrap"><table><thead><tr><th>股票</th><th>最新价格</th><th>涨跌幅</th><th class="chart-col">近况</th><th></th></tr></thead><tbody id="stock-table"></tbody></table></div><div class="table-foot"><span id="stock-count-label">显示 8 只热门股票</span><span id="quote-note">连接行情源后显示真实报价</span></div>
+        <!-- file:// 协议打开提示（仅当本地双击 HTML 导致 ES Module 受限时显示） -->
+        <div class="alert-banner error-banner" id="file-protocol-warning" hidden>
+          <div>
+            <strong>检测到通过本地 file:// 协议直接打开：</strong>
+            浏览器安全策略会拦截原生 ES 模块加载。请使用本地静态服务器（如 <code>npx serve .</code> 或 <code>python -m http.server 8080</code>）打开，或直接访问线上 GitHub Pages 地址。
           </div>
-          <aside class="panel detail-panel" id="detail-panel"><div class="detail-head"><div class="section-kicker">股票详情</div><button class="close-detail" id="close-detail" aria-label="关闭详情">×</button></div><div class="stock-profile"><div class="company-logo" id="detail-logo">A</div><div><h2 id="detail-name">Apple Inc.</h2><div class="symbol-line"><span id="detail-symbol">AAPL</span><span class="market-tag">NASDAQ</span></div></div><button class="star-button" id="detail-star" aria-label="加入自选">☆</button></div><div class="detail-price-row"><div><div class="detail-price" id="detail-price">$189.84</div><div class="detail-move positive-text" id="detail-move">+$2.18 (1.16%)</div></div><div class="range-select"><button class="active" data-range="1D">1D</button><button data-range="1W">1W</button><button data-range="1M">1M</button><button data-range="1Y">1Y</button></div></div><div class="chart-wrap"><svg id="price-chart" viewBox="0 0 520 180" preserveAspectRatio="none" role="img" aria-label="股价走势"></svg><div class="chart-labels"><span>09:30</span><span>11:00</span><span>12:30</span><span>14:00</span><span>16:00</span></div></div><div class="detail-metrics"><div><span>开盘价</span><b id="detail-open">$187.66</b></div><div><span>最高价</span><b id="detail-high">$191.20</b></div><div><span>最低价</span><b id="detail-low">$186.90</b></div><div><span>成交量</span><b id="detail-volume">42.8M</b></div></div><div class="trade-box"><div class="trade-switch"><button class="active" data-side="buy">买入</button><button data-side="sell">卖出</button></div><div class="order-options"><label>订单类型<select id="order-type"><option value="market">市价单</option><option value="limit">限价单</option></select></label><label id="limit-row" hidden>限价<input id="limit-price" type="number" min="0.01" step="0.01" placeholder="输入限价" /></label></div><div class="order-label-row"><span>数量</span><span>可用 <b id="order-buying-power">$100,000.00</b></span></div><div class="quantity-input"><button id="qty-minus" aria-label="减少数量">−</button><input id="quantity-input" inputmode="decimal" type="number" min="0.01" step="0.01" value="1" /><span>股</span><button id="qty-plus" aria-label="增加数量">＋</button></div><div class="order-total"><span>预估金额（含模拟滑点）</span><b id="order-total">—</b></div><button class="trade-button buy-button" id="trade-button">买入 AAPL <span>→</span></button><p class="trade-hint"><span>ⓘ</span> 虚拟成交；市价单按最新报价模拟 0.05% 滑点，无真实订单簿。</p></div></aside>
+        </div>
+
+        <!-- 数据源连接状态与合规横幅 -->
+        <section class="data-status-banner" id="data-status-banner" role="status" aria-live="polite">
+          <div class="banner-main">
+            <span class="banner-badge" id="banner-badge">未连接行情</span>
+            <p class="banner-text" id="banner-text">
+              当前未连接实时/延迟行情源，所有股价与图表均保持空白（绝不展示虚构演示价格）。请配置个人 Twelve Data 会话密钥或服务端安全代理后开始模拟交易。
+            </p>
+          </div>
+          <div class="banner-actions">
+            <span class="quota-chip" id="quota-chip" title="滑动 60 秒窗口与今日累计请求配额">配额 0/8 min</span>
+            <button class="banner-btn" id="banner-action-btn" type="button">配置行情源</button>
+          </div>
         </section>
 
-        <section class="panel holdings-panel"><div class="panel-heading"><div><div class="section-kicker">YOUR PORTFOLIO</div><h2>我的持仓</h2></div><button class="text-button" data-view="portfolio">持仓明细 <span>↗</span></button></div><div class="holdings-table-wrap"><table><thead><tr><th>股票</th><th>持有数量</th><th>平均成本</th><th>当前价格</th><th>市值</th><th>总收益</th></tr></thead><tbody id="holdings-table"></tbody></table></div><div class="empty-holdings" id="empty-holdings"><div class="empty-icon">◫</div><b>还没有持仓</b><span>选择一只股票，开始你的第一次模拟交易。</span></div></section>
-        <section class="panel orders-panel" id="orders-panel"><div class="panel-heading"><div><div class="section-kicker">ORDER ACTIVITY</div><h2>订单与成交</h2></div><span class="order-count" id="order-count">0 条记录</span></div><div class="holdings-table-wrap"><table class="orders-table"><thead><tr><th>时间</th><th>股票</th><th>方向</th><th>类型</th><th>数量</th><th>委托/成交价</th><th>状态</th><th></th></tr></thead><tbody id="order-table"></tbody></table></div><div class="empty-orders" id="empty-orders">尚无订单记录</div></section>
-        <footer class="footer"><span>© 2025 PaperTrade</span><span class="disclaimer">行情来自 Twelve Data · 模拟成交不连接券商 · 非投资建议</span><span>用好奇心，练习每一步 <i>✳</i></span></footer>
+        <!-- 账户资产核心概览（6 项） -->
+        <section class="stats-grid" aria-label="模拟账户资产概览">
+          <article class="stat-card highlight-card">
+            <div class="stat-top">
+              <span class="stat-label">账户总资产 · Total Equity</span>
+              <span class="stat-badge neutral" id="equity-return-badge">0.00%</span>
+            </div>
+            <div class="stat-value" id="stat-total-equity">$100,000.00</div>
+            <div class="stat-bottom">
+              <span id="stat-equity-note">初始本金 $100,000.00</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">可用购买力 · Buying Power</span>
+            </div>
+            <div class="stat-value" id="stat-buying-power">$100,000.00</div>
+            <div class="stat-bottom">
+              <span id="stat-total-cash-note">账户现金总额 $100,000.00</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">挂单冻结资金 · Frozen Cash</span>
+            </div>
+            <div class="stat-value" id="stat-frozen-cash">$0.00</div>
+            <div class="stat-bottom">
+              <span id="stat-frozen-note">0 笔待成交限价买单</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">持仓总市值 · Market Value</span>
+            </div>
+            <div class="stat-value" id="stat-market-value">$0.00</div>
+            <div class="stat-bottom">
+              <span id="stat-holdings-count-note">当前持有 0 只标的</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">未实现浮动盈亏 · Unrealized P&amp;L</span>
+              <span class="stat-badge neutral" id="stat-unrealized-pct">0.00%</span>
+            </div>
+            <div class="stat-value" id="stat-unrealized-pnl">$0.00</div>
+            <div class="stat-bottom">
+              <span id="stat-cost-basis-note">持仓总成本 $0.00</span>
+            </div>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-top">
+              <span class="stat-label">已实现累计盈亏 · Realized P&amp;L</span>
+            </div>
+            <div class="stat-value" id="stat-realized-pnl">$0.00</div>
+            <div class="stat-bottom">
+              <span id="stat-trades-count-note">累计成交 0 笔</span>
+            </div>
+          </article>
+        </section>
+
+        <!-- 核心市场基准 ETF 行情条 -->
+        <section class="benchmark-strip" aria-label="美股核心基准 ETF">
+          <div class="strip-head">
+            <span class="strip-kicker">BENCHMARK ETFs</span>
+            <small id="market-calendar-note">NYSE / NASDAQ</small>
+          </div>
+          <div class="benchmark-list" id="benchmark-list">
+            <!-- 动态渲染 SPY, QQQ, DIA, IWM，零硬编码价格 -->
+          </div>
+        </section>
+
+        <!-- 主交易工作台：左侧行情列表 + 右侧详情/K线/下单台 -->
+        <section class="workspace-grid" id="market-section">
+          <!-- 左侧股票探索与搜索面板 -->
+          <div class="panel stocks-panel">
+            <div class="panel-heading">
+              <div>
+                <div class="section-kicker">US EQUITIES · ETFs · ADRs</div>
+                <h2>美股行情与证券检索</h2>
+              </div>
+              <div class="heading-actions">
+                <button class="text-btn" id="sync-visible-btn" type="button" title="按可用配额请求当前页标的报价">同步本页报价 ⟳</button>
+                <button class="text-btn" id="reset-filters-btn" type="button">重置筛选</button>
+              </div>
+            </div>
+
+            <div class="toolbar">
+              <div class="tabs" id="category-tabs" role="tablist" aria-label="股票分类筛选">
+                <button class="tab active" type="button" role="tab" aria-selected="true" data-filter="all">全部标的</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="gainer">涨幅榜</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="loser">跌幅榜</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="etf">ETF</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="adr">ADR</button>
+                <button class="tab" type="button" role="tab" aria-selected="false" data-filter="watch">
+                  自选 <span id="watch-tab-count" class="tab-count">0</span>
+                </button>
+              </div>
+
+              <div class="search-controls">
+                <label class="search-box" for="search-input">
+                  <span class="search-icon" aria-hidden="true">⌕</span>
+                  <input
+                    id="search-input"
+                    type="search"
+                    autocomplete="off"
+                    placeholder="搜索代码/中英文名 (如 AAPL、英伟达、Anthropic)"
+                    aria-label="搜索美股代码或公司名称"
+                  />
+                  <button class="clear-search-btn" id="clear-search-btn" type="button" hidden aria-label="清空搜索">×</button>
+                  <kbd title="快捷键 Ctrl+K / ⌘K">⌘K</kbd>
+                </label>
+                <button class="remote-search-btn" id="remote-search-btn" type="button" title="通过已连接的数据源远程检索更多美股代码">
+                  全市场检索
+                </button>
+              </div>
+            </div>
+
+            <!-- 非上市公司 / 已退市证券拦截说明区（如搜索 Anthropic 时展示，绝不可下单） -->
+            <div class="non-tradable-zone" id="non-tradable-zone" hidden role="region" aria-label="非上市或不可交易实体说明"></div>
+
+            <!-- 证券行情列表 -->
+            <div class="table-wrap">
+              <table class="stocks-table" aria-label="美股标的列表">
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      <button class="sort-btn" type="button" data-sort="symbol">证券 / 交易所 <span class="sort-indicator" data-sort-ind="symbol"></span></button>
+                    </th>
+                    <th scope="col" class="num-col">
+                      <button class="sort-btn" type="button" data-sort="price">最新价 (USD) <span class="sort-indicator" data-sort-ind="price"></span></button>
+                    </th>
+                    <th scope="col" class="num-col">
+                      <button class="sort-btn" type="button" data-sort="percent">涨跌额 / 幅度 <span class="sort-indicator" data-sort-ind="percent"></span></button>
+                    </th>
+                    <th scope="col" class="num-col hide-sm">当日开 / 低—高</th>
+                    <th scope="col" class="num-col hide-md">
+                      <button class="sort-btn" type="button" data-sort="volume">成交量 <span class="sort-indicator" data-sort-ind="volume"></span></button>
+                    </th>
+                    <th scope="col" class="hide-md">报价状态</th>
+                    <th scope="col" class="action-col">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="stock-table-body"></tbody>
+              </table>
+            </div>
+
+            <!-- 分页与数据源状态脚标 -->
+            <div class="table-foot">
+              <div class="pagination-info" id="stock-pagination-info">显示 0–0 / 共 0 只标的</div>
+              <div class="pagination-controls">
+                <label class="page-size-label">
+                  每页
+                  <select id="page-size-select" aria-label="每页显示条数">
+                    <option value="12" selected>12</option>
+                    <option value="20">20</option>
+                    <option value="40">40</option>
+                  </select>
+                </label>
+                <button class="page-btn" id="prev-page-btn" type="button" aria-label="上一页">‹ 上一页</button>
+                <span class="page-indicator" id="page-indicator">1 / 1</span>
+                <button class="page-btn" id="next-page-btn" type="button" aria-label="下一页">下一页 ›</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧个股详情、真实 K 线与模拟下单台 -->
+          <aside class="panel detail-panel" id="detail-panel" aria-label="个股详情与模拟交易面板">
+            <div class="detail-head">
+              <div class="section-kicker">INSTRUMENT &amp; ORDER TICKET</div>
+              <div class="detail-head-actions">
+                <button class="mini-icon-btn" id="refresh-single-btn" type="button" title="刷新当前标的报价与 K 线" aria-label="刷新当前标的">⟳</button>
+                <button class="close-detail-btn" id="close-detail-btn" type="button" aria-label="关闭详情面板">×</button>
+              </div>
+            </div>
+
+            <!-- 证券头部信息 -->
+            <div class="stock-profile">
+              <div class="company-logo" id="detail-logo" data-tone="white">A</div>
+              <div class="profile-text">
+                <div class="profile-title-row">
+                  <h2 id="detail-name">Apple Inc.</h2>
+                  <span class="asset-badge" id="detail-asset-type">Stock</span>
+                </div>
+                <div class="symbol-line">
+                  <b id="detail-symbol">AAPL</b>
+                  <span class="market-tag" id="detail-exchange">NASDAQ</span>
+                  <span class="market-tag" id="detail-currency">USD</span>
+                </div>
+                <div class="disambiguation-note" id="detail-disambiguation" hidden></div>
+              </div>
+              <button class="star-button" id="detail-star-btn" type="button" aria-label="加入自选">☆</button>
+            </div>
+
+            <!-- 实时/缓存报价展示（绝无硬编码价格） -->
+            <div class="detail-price-box">
+              <div class="price-main-row">
+                <div>
+                  <div class="detail-price" id="detail-price">—</div>
+                  <div class="detail-move" id="detail-move">未获取报价</div>
+                </div>
+                <div class="quote-freshness-col">
+                  <span class="freshness-pill missing" id="detail-freshness-badge">暂无报价</span>
+                  <small id="detail-quote-time">报价时间：—</small>
+                </div>
+              </div>
+              <div class="quote-source-meta" id="detail-source-meta">
+                数据源：未连接 · 请先连接行情源获取可验证报价
+              </div>
+            </div>
+
+            <!-- K 线周期与样式控制栏 -->
+            <div class="chart-toolbar">
+              <div class="range-select" role="group" aria-label="K 线时间周期">
+                <button class="active" type="button" data-range="1D">1D</button>
+                <button type="button" data-range="1W">1W</button>
+                <button type="button" data-range="1M">1M</button>
+                <button type="button" data-range="3M">3M</button>
+                <button type="button" data-range="1Y">1Y</button>
+              </div>
+              <div class="chart-mode-select" role="group" aria-label="图表类型">
+                <button class="active" type="button" data-chart-mode="area">折线</button>
+                <button type="button" data-chart-mode="candle">蜡烛 (OHLC)</button>
+              </div>
+            </div>
+
+            <!-- 真实历史 K 线图与悬停详情 -->
+            <div class="chart-wrap">
+              <div class="chart-tooltip" id="chart-tooltip" hidden></div>
+              <svg id="price-chart" viewBox="0 0 560 190" preserveAspectRatio="none" role="img" aria-label="真实历史价格与成交量走势"></svg>
+              <div class="chart-labels" id="chart-labels">
+                <span>—</span><span>—</span><span>—</span>
+              </div>
+            </div>
+
+            <!-- 当日 OHLCV 核心行情指标 -->
+            <div class="detail-metrics" aria-label="当日行情核心指标">
+              <div><span>今开 Open</span><b id="detail-open">—</b></div>
+              <div><span>最高 High</span><b id="detail-high">—</b></div>
+              <div><span>最低 Low</span><b id="detail-low">—</b></div>
+              <div><span>前收 Prev</span><b id="detail-prev-close">—</b></div>
+              <div class="span-2"><span>成交量 Volume</span><b id="detail-volume">—</b></div>
+            </div>
+
+            <!-- 模拟交易下单台 -->
+            <form class="trade-box" id="order-form" novalidate>
+              <div class="trade-switch" role="tablist" aria-label="买卖方向">
+                <button class="active" type="button" data-side="buy">买入 Buy</button>
+                <button type="button" data-side="sell">卖出 Sell</button>
+              </div>
+
+              <div class="order-options">
+                <label for="order-type-select">
+                  订单类型 · Order Type
+                  <select id="order-type-select">
+                    <option value="market">市价单 (Market)</option>
+                    <option value="limit">限价单 (Limit)</option>
+                  </select>
+                </label>
+
+                <div class="limit-field-wrap" id="limit-field-wrap" hidden>
+                  <div class="field-head">
+                    <label for="limit-price-input">委托限价 (USD)</label>
+                    <button class="inline-fill-btn" id="fill-last-price-btn" type="button">填入最新价</button>
+                  </div>
+                  <input id="limit-price-input" type="number" inputmode="decimal" min="0.0001" step="0.01" placeholder="输入美元限价" />
+                </div>
+              </div>
+
+              <div class="order-label-row">
+                <label for="quantity-input">委托数量（支持最多 4 位小数股）</label>
+                <span id="order-capacity-label">可用 <b id="order-capacity-value">$100,000.00</b></span>
+              </div>
+
+              <div class="quantity-input">
+                <button id="qty-minus-btn" type="button" aria-label="减少 1 股">−</button>
+                <input id="quantity-input" inputmode="decimal" type="number" min="0.0001" step="0.0001" value="1" />
+                <span class="unit-tag">股</span>
+                <button id="qty-plus-btn" type="button" aria-label="增加 1 股">＋</button>
+              </div>
+
+              <div class="quick-qty-row" aria-label="快捷仓位比例">
+                <button type="button" data-pct="0.25">25%</button>
+                <button type="button" data-pct="0.5">50%</button>
+                <button type="button" data-pct="0.75">75%</button>
+                <button type="button" data-pct="1">MAX</button>
+              </div>
+
+              <!-- 费用、滑点与成交金额明细预览 -->
+              <div class="order-breakdown" aria-label="模拟订单测算明细">
+                <div class="bd-row"><span>参考价格</span><b id="bd-ref-price">—</b></div>
+                <div class="bd-row"><span>模拟滑点 (<span id="bd-slip-label">市价 ±0.05%</span>)</span><b id="bd-slippage">—</b></div>
+                <div class="bd-row"><span>平台模拟佣金</span><b id="bd-commission">$0.00</b></div>
+                <div class="bd-row total-row"><span>预估成交/冻结金额</span><b id="bd-total">—</b></div>
+              </div>
+
+              <!-- 休市提示 / 禁用原因说明 -->
+              <div class="order-session-notice" id="order-session-notice" hidden></div>
+              <div class="order-guard-msg" id="order-guard-msg" role="alert" hidden></div>
+
+              <button class="trade-submit-btn" id="trade-submit-btn" type="submit" disabled>
+                请先连接并同步行情
+              </button>
+
+              <details class="sim-rules-details">
+                <summary>查看模拟撮合假设与限制说明</summary>
+                <ul>
+                  <li><b>无真实撮合簿：</b>本终端不连接真实券商或交易所订单簿，所有成交均为本地状态模拟。</li>
+                  <li><b>费用与滑点：</b>市价单按新鲜报价加计 <code>0.05%</code> 双向滑点（买入上浮、卖出下浮），模拟佣金 <code>$0.00</code>。</li>
+                  <li><b>限价单规则：</b>限价买单冻结对应现金，限价卖单冻结可卖股数；仅在获取到<b>未过期新鲜报价</b>且满足限价条件时触发，严禁用陈旧缓存报价触发。</li>
+                  <li><b>小数股支持：</b>最小委托 <code>0.0001</code> 股，最多支持 4 位小数。</li>
+                </ul>
+              </details>
+            </form>
+          </aside>
+        </section>
+
+        <!-- 我的持仓面板 -->
+        <section class="panel holdings-panel" id="portfolio-section" aria-label="我的持仓列表">
+          <div class="panel-heading">
+            <div>
+              <div class="section-kicker">PORTFOLIO POSITIONS</div>
+              <h2>我的持仓</h2>
+            </div>
+            <div class="heading-actions">
+              <button class="text-btn" id="sync-holdings-btn" type="button">同步持仓报价 ⟳</button>
+            </div>
+          </div>
+
+          <div class="table-wrap" id="holdings-table-wrap">
+            <table class="holdings-table">
+              <thead>
+                <tr>
+                  <th scope="col">证券</th>
+                  <th scope="col" class="num-col">总持仓</th>
+                  <th scope="col" class="num-col">可卖 / 冻结</th>
+                  <th scope="col" class="num-col">平均成本</th>
+                  <th scope="col" class="num-col">最新价</th>
+                  <th scope="col" class="num-col">持仓市值</th>
+                  <th scope="col" class="num-col">未实现盈亏</th>
+                  <th scope="col" class="action-col">快捷操作</th>
+                </tr>
+              </thead>
+              <tbody id="holdings-table-body"></tbody>
+            </table>
+          </div>
+
+          <div class="empty-state" id="empty-holdings">
+            <div class="empty-icon" aria-hidden="true">◫</div>
+            <div>
+              <b>暂无美股持仓</b>
+              <p>连接行情源后，在行情列表中选择任意可交易美股、ETF 或 ADR 提交模拟订单。</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 订单历史与成交记录面板 -->
+        <section class="panel orders-panel" id="orders-section" aria-label="订单历史与成交记录">
+          <div class="panel-heading orders-heading">
+            <div class="ledger-tabs" role="tablist" aria-label="账本记录切换">
+              <button class="ledger-tab active" type="button" role="tab" aria-selected="true" data-ledger="orders">
+                委托订单历史 <span class="tab-count" id="orders-total-count">0</span>
+              </button>
+              <button class="ledger-tab" type="button" role="tab" aria-selected="false" data-ledger="trades">
+                已成交明细 <span class="tab-count" id="trades-total-count">0</span>
+              </button>
+            </div>
+
+            <div class="ledger-filters">
+              <select id="order-status-filter" aria-label="按订单状态筛选">
+                <option value="all">全部状态</option>
+                <option value="pending">等待成交 (Pending)</option>
+                <option value="filled">已成交 (Filled)</option>
+                <option value="cancelled">已撤单 (Cancelled)</option>
+                <option value="rejected">已拒绝 (Rejected)</option>
+              </select>
+              <select id="order-side-filter" aria-label="按买卖方向筛选">
+                <option value="all">全部方向</option>
+                <option value="buy">买入 (Buy)</option>
+                <option value="sell">卖出 (Sell)</option>
+              </select>
+              <input id="order-symbol-filter" type="search" placeholder="按代码/订单号筛选" aria-label="按股票代码或订单号筛选" />
+            </div>
+          </div>
+
+          <!-- 委托订单表 -->
+          <div class="table-wrap" id="orders-table-wrap">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th scope="col">时间</th>
+                  <th scope="col">订单号</th>
+                  <th scope="col">标的</th>
+                  <th scope="col">方向 / 类型</th>
+                  <th scope="col" class="num-col">委托数量</th>
+                  <th scope="col" class="num-col">委托限价 / 成交均价</th>
+                  <th scope="col">状态 / 说明</th>
+                  <th scope="col" class="action-col">操作</th>
+                </tr>
+              </thead>
+              <tbody id="orders-table-body"></tbody>
+            </table>
+          </div>
+
+          <!-- 成交明细表 -->
+          <div class="table-wrap" id="trades-table-wrap" hidden>
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th scope="col">成交时间</th>
+                  <th scope="col">成交号</th>
+                  <th scope="col">标的</th>
+                  <th scope="col">方向 / 类型</th>
+                  <th scope="col" class="num-col">成交数量</th>
+                  <th scope="col" class="num-col">成交价</th>
+                  <th scope="col" class="num-col">成交额 / 滑点</th>
+                  <th scope="col" class="num-col">已实现盈亏</th>
+                </tr>
+              </thead>
+              <tbody id="trades-table-body"></tbody>
+            </table>
+          </div>
+
+          <div class="empty-state compact" id="empty-ledger">
+            <div>
+              <b id="empty-ledger-title">尚无订单记录</b>
+              <p id="empty-ledger-desc">提交的市价单、限价挂单、已撤单及被拒绝委托均会完整记录在此。</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 页脚：数据源归属与免责声明 -->
+        <footer class="footer">
+          <div class="footer-left">
+            <span>© 2026 PaperTrade Simulator</span>
+            <span class="dot-sep">·</span>
+            <span>学习模拟专用，不构成任何投资建议，不连接真实券商，不执行真实买卖</span>
+          </div>
+          <div class="footer-right">
+            <span>Market data powered by <a href="https://twelvedata.com" target="_blank" rel="noopener">Twelve Data</a> (when connected)</span>
+            <span class="dot-sep">·</span>
+            <a href="ashare/">前往 A 股模拟专版 ↗</a>
+          </div>
+        </footer>
       </div>
     </main>
   </div>
-  <nav class="mobile-nav"><button class="active" data-view="market"><span>▦</span>行情</button><button data-view="portfolio"><span>◫</span>持仓</button><button data-view="watchlist"><span>☆</span>自选</button><button id="mobile-account"><span>◉</span>账户</button></nav>
-  <div class="settings-backdrop" id="settings-backdrop" hidden><section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div class="settings-head"><div><div class="section-kicker">MARKET DATA</div><h2 id="settings-title">连接美股行情</h2></div><button class="close-detail" id="settings-close" aria-label="关闭">×</button></div><p class="settings-copy">使用你自己的 Twelve Data API Key 获取报价和历史 K 线。密钥只保存在当前浏览器会话中，通过 HTTPS 请求发送给 Twelve Data，不会写入 GitHub 仓库。</p><label class="settings-label" for="api-key-input">API Key</label><input class="api-key-input" id="api-key-input" type="password" autocomplete="off" placeholder="粘贴个人 API Key" /><div class="settings-actions"><a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noreferrer">获取 API Key ↗</a><button class="text-button" id="clear-key">清除密钥</button><button class="trade-button" id="connect-market">连接行情</button></div><p class="settings-fineprint">请确认你的数据计划允许在此网页展示行情。免费额度与实时数据覆盖因账户计划而异；此模拟器每 15 分钟刷新一次全市场报价，历史图表按需请求。不要在公共设备输入密钥。</p><div class="settings-status" id="settings-status"></div></section></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+
+  <!-- 手机端底部固定导航 -->
+  <nav class="mobile-nav" aria-label="移动端底部导航">
+    <button class="active" type="button" data-nav="market"><span>▦</span>行情</button>
+    <button type="button" data-nav="watchlist"><span>★</span>自选</button>
+    <button type="button" data-nav="portfolio"><span>◫</span>持仓</button>
+    <button type="button" data-nav="orders"><span>≡</span>订单</button>
+    <button type="button" id="mobile-settings-btn"><span>⚙</span>行情源</button>
+  </nav>
+
+  <!-- 模态框 1：行情数据源配置与安全许可说明 -->
+  <div class="modal-backdrop" id="settings-modal" hidden>
+    <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+      <div class="modal-head">
+        <div>
+          <div class="section-kicker">MARKET DATA &amp; SECURITY</div>
+          <h2 id="settings-modal-title">配置美股行情数据源</h2>
+        </div>
+        <button class="close-modal-btn" id="close-settings-btn" type="button" aria-label="关闭设置弹窗">×</button>
+      </div>
+
+      <div class="security-callout">
+        <strong>GitHub Pages 静态站点安全与许可提示：</strong>
+        <p>
+          GitHub Pages 为公开静态托管，任何写入代码或 URL 的密钥都会暴露给所有访客。推荐生产环境使用<b>服务端安全代理 + 环境变量</b>（需具备商业公开展示许可）；个人学习测试可使用<b>个人会话密钥模式</b>（密钥仅保存在当前标签页 <code>sessionStorage</code>，通过 HTTPS <code>Authorization</code> 请求头发送，更换或清除密钥绝不影响本地模拟账户数据）。
+        </p>
+      </div>
+
+      <div class="mode-tabs" role="tablist" aria-label="行情连接模式">
+        <button class="mode-tab active" type="button" data-conn-mode="byok">个人 API Key（当前浏览器会话）</button>
+        <button class="mode-tab" type="button" data-conn-mode="proxy">服务端安全代理（推荐生产方式）</button>
+      </div>
+
+      <!-- 模式 A：个人 BYOK -->
+      <div class="conn-pane" id="pane-byok">
+        <label class="field-label" for="api-key-input">Twelve Data API Key</label>
+        <input
+          class="text-input mono-input"
+          id="api-key-input"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="粘贴你的个人 Twelve Data API Key（不写入仓库或 URL）"
+        />
+        <label class="field-label" for="plan-tier-select">账户额度档位（用于本地防超限节流保护）</label>
+        <select class="text-input" id="plan-tier-select">
+          <option value="free">Basic 免费个人层（限流保护：8 credits / 分钟，800 / 天）</option>
+          <option value="pro">付费高配额层（限流保护：55 credits / 分钟）</option>
+        </select>
+        <p class="fineprint">
+          个人免费计划仅供个人学习测试使用，不可用于向第三方公众再分发行情。请勿在公共电脑输入个人密钥。
+          <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer">获取 Twelve Data API Key ↗</a>
+        </p>
+      </div>
+
+      <!-- 模式 B：服务端代理 -->
+      <div class="conn-pane" id="pane-proxy" hidden>
+        <label class="field-label" for="proxy-url-input">服务端代理根地址 (HTTPS)</label>
+        <input
+          class="text-input mono-input"
+          id="proxy-url-input"
+          type="url"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="例如 https://papertrade-quotes.example.workers.dev"
+        />
+        <p class="fineprint">
+          仓库内 <code>proxy/cloudflare-worker.js</code> 已提供完整服务端代理模板。请在 Worker 环境变量中设置 <code>TWELVE_DATA_API_KEY</code> 与 <code>ALLOWED_ORIGIN</code>，并确认上游数据计划具备网页展示授权。
+        </p>
+      </div>
+
+      <div class="modal-status" id="settings-status-msg" role="status" aria-live="polite"></div>
+
+      <div class="modal-actions">
+        <button class="btn-danger-ghost" id="disconnect-market-btn" type="button">断开并清除会话行情</button>
+        <div class="modal-actions-right">
+          <button class="btn-secondary" id="cancel-settings-btn" type="button">取消</button>
+          <button class="btn-primary" id="save-connect-btn" type="button">验证并连接行情</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 模态框 2：订单详情查看 -->
+  <div class="modal-backdrop" id="order-detail-modal" hidden>
+    <section class="modal-dialog compact-dialog" role="dialog" aria-modal="true" aria-labelledby="order-detail-title">
+      <div class="modal-head">
+        <div>
+          <div class="section-kicker">ORDER INSPECTION</div>
+          <h2 id="order-detail-title">模拟订单详情</h2>
+        </div>
+        <button class="close-modal-btn" id="close-order-detail-btn" type="button" aria-label="关闭订单详情">×</button>
+      </div>
+      <div class="order-detail-body" id="order-detail-body"></div>
+      <div class="modal-actions">
+        <div id="order-detail-cancel-slot"></div>
+        <button class="btn-secondary" id="done-order-detail-btn" type="button">关闭</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- 模态框 3：重置模拟账户确认 -->
+  <div class="modal-backdrop" id="reset-modal" hidden>
+    <section class="modal-dialog compact-dialog" role="dialog" aria-modal="true" aria-labelledby="reset-modal-title">
+      <div class="modal-head">
+        <div>
+          <div class="section-kicker">ACCOUNT RESET</div>
+          <h2 id="reset-modal-title">确认重置模拟账户？</h2>
+        </div>
+        <button class="close-modal-btn" id="close-reset-btn" type="button" aria-label="关闭重置确认">×</button>
+      </div>
+      <p class="modal-copy">
+        重置后，模拟账户将恢复为初始资金 <b>$100,000.00</b>，当前所有持仓、等待中的限价挂单、历史订单与成交记录将被清空。<b>当前已连接的行情密钥或代理配置不会被清除。</b>
+      </p>
+      <label class="checkbox-row">
+        <input type="checkbox" id="keep-watchlist-checkbox" checked />
+        <span>保留我当前的自选股票列表</span>
+      </label>
+      <div class="modal-actions">
+        <span></span>
+        <div class="modal-actions-right">
+          <button class="btn-secondary" id="cancel-reset-btn" type="button">取消</button>
+          <button class="btn-danger" id="confirm-reset-btn" type="button">确认重置账户</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 全局轻提示 Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    if (window.location.protocol === 'file:') {
+      var el = document.getElementById('file-protocol-warning');
+      if (el) el.hidden = false;
+    }
+  </script>
+  <script type="module" src="./js/main.js"></script>
 </body>
 </html>
