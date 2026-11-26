@@ -13,7 +13,7 @@ const stocks=[
 const indexDefs=[{symbol:'SPX',label:'S&P 500'},{symbol:'IXIC',label:'NASDAQ'},{symbol:'DJI',label:'DOW'},{symbol:'VIX',label:'VIX'}];
 const initialCash=100000,$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 let state={cash:initialCash,positions:{},watchlist:['NVDA','AAPL'],trades:[],orders:[]},quotes={},seriesCache={},selected='AAPL',filter='all',side='buy',range='1D',apiKey=sessionStorage.getItem('papertrade-market-key')||'',lastSync=0,syncing=false;
-try{const saved=JSON.parse(localStorage.getItem('papertrade-state'));if(saved&&typeof saved.cash==='number')state={...state,...saved,orders:saved.orders||[]}}catch(e){}
+try{const saved=JSON.parse(localStorage.getItem('papertrade-state'));if(saved&&typeof saved.cash==='number')state={...state,...saved,orders:saved.orders||[]};const cached=JSON.parse(localStorage.getItem('papertrade-quotes'));if(cached&&typeof cached==='object')quotes=cached}catch(e){}
 const fmt=(n,d=2)=>Number.isFinite(Number(n))?'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 const signed=n=>(n>=0?'+':'−')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const pct=n=>Number.isFinite(Number(n))?(n>=0?'+':'')+Number(n).toFixed(2)+'%':'—';
@@ -22,13 +22,15 @@ function getStock(s){return stocks.find(x=>x.symbol===s)}
 function q(s){return quotes[s]||null}
 function px(s){return Number(q(s)?.price)||0}
 function marketValue(){return Object.entries(state.positions).reduce((n,e)=>n+px(e[0])*(e[1].qty||0),0)}
+function missingPositionQuotes(){return Object.keys(state.positions).some(s=>state.positions[s].qty>0&&!q(s))}
+function freshQuote(s){return !!q(s)&&Date.now()-(q(s)._received||0)<15*60*1000}
 function totalValue(){return state.cash+marketValue()}
 function reservedCash(){return state.orders.filter(o=>o.status==='pending'&&o.side==='buy').reduce((n,o)=>n+o.qty*o.limitPrice,0)}
 function reservedShares(s){return state.orders.filter(o=>o.status==='pending'&&o.side==='sell'&&o.symbol===s).reduce((n,o)=>n+o.qty,0)}
 function availableCash(except){return Math.max(0,state.cash-state.orders.filter(o=>o.status==='pending'&&o.side==='buy'&&o.id!==except).reduce((n,o)=>n+o.qty*o.limitPrice,0))}
 function availableShares(s,except){return Math.max(0,(state.positions[s]?.qty||0)-state.orders.filter(o=>o.status==='pending'&&o.side==='sell'&&o.symbol===s&&o.id!==except).reduce((n,o)=>n+o.qty,0))}
 function toast(m){const e=$('#toast');e.textContent=m;e.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>e.classList.remove('show'),2400)}
-function setQuote(symbol,d){const p=Number(d.close||d.price||d.last);if(!Number.isFinite(p)||p<=0)throw new Error('无效报价');quotes[symbol]={price:p,open:Number(d.open)||null,high:Number(d.high)||null,low:Number(d.low)||null,volume:Number(d.volume)||null,change:Number(d.change)||null,percent:Number(d.percent_change)||null,datetime:d.datetime||'',timestamp:Number(d.timestamp)||Math.floor(Date.now()/1000),_received:Date.now()};seriesCache={}}
+function setQuote(symbol,d){const p=Number(d.close||d.price||d.last);if(!Number.isFinite(p)||p<=0)throw new Error('无效报价');quotes[symbol]={price:p,_received:Date.now(),open:Number(d.open)||null,high:Number(d.high)||null,low:Number(d.low)||null,volume:Number(d.volume)||null,change:Number(d.change)||null,percent:Number(d.percent_change)||null,datetime:d.datetime||'',timestamp:Number(d.timestamp)||Math.floor(Date.now()/1000),_received:Date.now()};seriesCache={}}
 async function fetchQuote(symbol){if(q(symbol)&&Date.now()-q(symbol)._received<120000)return;const r=await fetch('https://api.twelvedata.com/quote?symbol='+encodeURIComponent(symbol),{headers:{Authorization:'apikey '+apiKey},cache:'no-store'});const d=await r.json();if(!r.ok||d.status==='error'||d.code)throw new Error(d.message||'行情请求失败');setQuote(symbol,d)}
 async function syncQuotes(){
  if(!apiKey||syncing)return;syncing=true;$('#market-badge').textContent='同步中';$('#settings-status').textContent='正在同步报价…';
@@ -66,7 +68,7 @@ function renderDetail(){
  $('#order-buying-power').textContent=fmt(side==='buy'?availableCash():availableShares(selected)*px(selected));$('#trade-button').textContent=(side==='buy'?'买入':'卖出')+' '+s.symbol+'  →';$('#trade-button').classList.toggle('sell-mode',side==='sell');updatePreview();drawChart(seriesCache[s.symbol+range]?.values);loadSeries(s.symbol,range)
 }
 function renderHoldings(){
- const entries=Object.entries(state.positions).filter(e=>e[1].qty>1e-6);$('#holdings-table').innerHTML=entries.map(e=>{const sym=e[0],p=e[1],s=getStock(sym)||{name:sym,tone:'blue'},price=px(sym),mv=price*p.qty,profit=(price-p.avgCost)*p.qty;return '<tr><td><div class="stock-cell"><span class="ticker-logo" data-tone="'+s.tone+'">'+sym[0]+'</span><div><div class="stock-name">'+s.name+'</div><div class="stock-symbol">'+sym+'</div></div></div></td><td class="price-cell">'+p.qty.toLocaleString('en-US',{maximumFractionDigits:4})+' 股</td><td class="price-cell">'+fmt(p.avgCost)+'</td><td class="price-cell">'+fmt(price)+'</td><td class="price-cell">'+fmt(mv)+'</td><td class="'+(profit>=0?'positive-text':'negative-text')+'" style="font:10px var(--mono)">'+signed(profit)+'</td></tr>'}).join('');
+ const entries=Object.entries(state.positions).filter(e=>e[1].qty>1e-6);$('#holdings-table').innerHTML=entries.map(e=>{const sym=e[0],p=e[1],s=getStock(sym)||{name:sym,tone:'blue'},price=px(sym),mv=price*p.qty,profit=(price-p.avgCost)*p.qty;return '<tr><td><div class="stock-cell"><span class="ticker-logo" data-tone="'+s.tone+'">'+sym[0]+'</span><div><div class="stock-name">'+s.name+'</div><div class="stock-symbol">'+sym+'</div></div></div></td><td class="price-cell">'+p.qty.toLocaleString('en-US',{maximumFractionDigits:4})+' 股</td><td class="price-cell">'+fmt(p.avgCost)+'</td><td class="price-cell">'+fmt(q(sym)?.price)+'</td><td class="price-cell">'+fmt(q(sym)?mv:NaN)+'</td><td class="'+(profit>=0?'positive-text':'negative-text')+'" style="font:10px var(--mono)">'+(q(sym)?signed(profit):'—')+'</td></tr>'}).join('');
  $('#empty-holdings').style.display=entries.length?'none':'flex';$('#holdings-table').parentElement.style.display=entries.length?'table':'none'
 }
 function renderOrders(){
@@ -76,19 +78,19 @@ function renderOrders(){
  $$('[data-cancel]').forEach(b=>b.addEventListener('click',()=>cancelOrder(b.dataset.cancel)))
 }
 function renderAccount(){
- const invested=marketValue(),total=totalValue(),profit=total-initialCash,p=profit/initialCash*100;
- $('#cash-value').textContent=fmt(availableCash());$('#invested-value').textContent=fmt(invested);$('#total-value').textContent=fmt(total);$('#profit-value').textContent=signed(profit);$('#profit-value').className='stat-value '+(profit<0?'negative-text':'');
- $('#profit-percent').textContent=pct(p);$('#profit-percent').className='stat-badge '+(profit>=0?'positive':'negative');$('#total-change').textContent=pct(p);$('#total-change').className='stat-badge '+(profit>=0?'positive':'negative');
+ const incomplete=missingPositionQuotes(),invested=marketValue(),total=totalValue(),profit=total-initialCash,p=profit/initialCash*100;
+ $('#cash-value').textContent=fmt(availableCash());$('#invested-value').textContent=incomplete?'—':fmt(invested);$('#total-value').textContent=incomplete?'—':fmt(total);$('#profit-value').textContent=incomplete?'—':signed(profit);$('#profit-value').className='stat-value '+(profit<0?'negative-text':'');
+ $('#profit-percent').textContent=incomplete?'—':pct(p);$('#profit-percent').className='stat-badge '+(profit>=0?'positive':'negative');$('#total-change').textContent=incomplete?'—':pct(p);$('#total-change').className='stat-badge '+(profit>=0?'positive':'negative');
  $('#order-buying-power').textContent=fmt(side==='buy'?availableCash():availableShares(selected)*px(selected));renderHoldings();renderOrders()
 }
-function renderStatus(){const z=q(selected);$('#market-badge').textContent=!apiKey?'行情未连接':syncing?'同步中':z?'已连接':'同步中';if(!apiKey)$('#quote-note').textContent='请添加行情 API Key；当前隐藏示例股价';}
+function renderStatus(){const z=q(selected);$('#market-badge').textContent=!apiKey?(z?'缓存报价':'行情未连接'):syncing?'同步中':z?(freshQuote(selected)?'已连接':'报价已过期'):'同步中';if(!apiKey)$('#quote-note').textContent='请添加行情 API Key；当前隐藏示例股价';}
 function renderAll(){renderIndices();renderStocks();renderDetail();renderAccount();renderStatus()}
 function selectStock(s,open=false){selected=s;renderDetail();if(open&&innerWidth<=700)$('#detail-panel').classList.add('mobile-open')}
 function toggleWatch(s){state.watchlist=state.watchlist.includes(s)?state.watchlist.filter(x=>x!==s):state.watchlist.concat([s]);save();renderStocks();renderDetail();toast(s+(state.watchlist.includes(s)?' 已加入自选':' 已从自选移除'))}
 function updatePreview(){
  const z=q(selected),qty=parseFloat($('#quantity-input').value)||0,limit=parseFloat($('#limit-price').value)||0,isLimit=$('#order-type').value==='limit';$('#limit-row').hidden=!isLimit;
  const reference=isLimit&&limit>0?limit:z?.price,estimated=reference?reference*qty*(side==='buy'?1.0005:.9995):NaN;$('#order-total').textContent=fmt(estimated);
- const enabled=!!z&&qty>0&&(!isLimit||limit>0);$('#trade-button').disabled=!enabled;$('#trade-button').style.opacity=enabled?'1':'.45'
+ const enabled=!!z&&qty>0&&(!isLimit||limit>0)&&(isLimit||freshQuote(selected));$('#trade-button').disabled=!enabled;$('#trade-button').style.opacity=enabled?'1':'.45'
 }
 function fill(order,marketPrice){
  const pos=state.positions[order.symbol]||{qty:0,avgCost:0},price=order.type==='limit'?(order.side==='buy'?Math.min(order.limitPrice,marketPrice):Math.max(order.limitPrice,marketPrice)):marketPrice*(order.side==='buy'?1.0005:.9995);
@@ -96,12 +98,12 @@ function fill(order,marketPrice){
  else{if(order.qty>availableShares(order.symbol,order.status==='pending'?order.id:null)+1e-8){order.status='rejected';order.note='持仓不足';return false}pos.qty-=order.qty;state.cash+=order.qty*price;if(pos.qty<1e-6)delete state.positions[order.symbol];else state.positions[order.symbol]=pos}
  order.status='filled';order.fillPrice=price;state.trades.unshift({symbol:order.symbol,qty:order.qty,side:order.side,type:order.type,price:price,time:Date.now()});return true
 }
-function checkLimitOrders(){let changed=false;state.orders.filter(o=>o.status==='pending').forEach(o=>{const p=px(o.symbol);if(p&&(o.side==='buy'&&p<=o.limitPrice||o.side==='sell'&&p>=o.limitPrice)){fill(o,p);changed=true}});if(changed){save();renderAll()}}
+function checkLimitOrders(){let changed=false;state.orders.filter(o=>o.status==='pending').forEach(o=>{const p=px(o.symbol);if(p&&freshQuote(o.symbol)&&(o.side==='buy'&&p<=o.limitPrice||o.side==='sell'&&p>=o.limitPrice)){fill(o,p);changed=true}});if(changed){save();renderAll()}}
 function trade(){
- const z=q(selected),qty=parseFloat($('#quantity-input').value),type=$('#order-type').value,limit=parseFloat($('#limit-price').value);if(!z){toast('请先连接真实行情');return}if(!Number.isFinite(qty)||qty<=0){toast('请输入有效数量');return}if(type==='limit'&&(!Number.isFinite(limit)||limit<=0)){toast('请输入有效限价');return}
+ const z=q(selected),qty=parseFloat($('#quantity-input').value),type=$('#order-type').value,limit=parseFloat($('#limit-price').value);if(!z){toast('请先连接真实行情');return}if(type==='market'&&!freshQuote(selected)){toast('报价已过期，请先刷新行情');return}if(!Number.isFinite(qty)||qty<=0){toast('请输入有效数量');return}if(type==='limit'&&(!Number.isFinite(limit)||limit<=0)){toast('请输入有效限价');return}
  const o={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),symbol:selected,qty:qty,side:side,type:type,limitPrice:type==='limit'?limit:null,status:type==='limit'?'pending':'new',time:Date.now()};
  if(type==='market'){if(!fill(o,z.price)){toast(o.note==='现金不足'?'可用现金不足':'可卖持仓不足');return}toast('市价模拟成交 '+qty+' 股 '+selected+' @ '+fmt(o.fillPrice))}
- else{if(side==='buy'&&qty*limit>availableCash()){toast('限价单金额超过可用现金');return}if(side==='sell'&&qty>availableShares(selected)){toast('限价单数量超过可卖持仓');return}state.orders.unshift(o);if(side==='buy'&&z.price<=limit||side==='sell'&&z.price>=limit){if(!fill(o,z.price))toast(o.note);else toast('限价单立即成交 @ '+fmt(o.fillPrice))}else toast('限价单已提交，等待最新报价触发')}
+ else{if(side==='buy'&&qty*limit>availableCash()){toast('限价单金额超过可用现金');return}if(side==='sell'&&qty>availableShares(selected)){toast('限价单数量超过可卖持仓');return}state.orders.unshift(o);if(freshQuote(selected)&&(side==='buy'&&z.price<=limit||side==='sell'&&z.price>=limit)){if(!fill(o,z.price))toast(o.note);else toast('限价单立即成交 @ '+fmt(o.fillPrice))}else toast('限价单已提交，等待最新报价触发')}
  save();renderAll()
 }
 function cancelOrder(id){const o=state.orders.find(x=>x.id===id);if(o&&o.status==='pending'){o.status='cancelled';save();renderAll();toast('订单已撤销')}}
@@ -118,7 +120,7 @@ $('#qty-minus').addEventListener('click',()=>{const x=$('#quantity-input');x.val
 $('#trade-button').addEventListener('click',trade);$('#close-detail').addEventListener('click',()=>$('#detail-panel').classList.remove('mobile-open'));$('#detail-panel').addEventListener('click',e=>{if(e.target===e.currentTarget)$('#detail-panel').classList.remove('mobile-open')});
 $$('.range-select button').forEach(b=>b.addEventListener('click',()=>{range=b.dataset.range;$$('.range-select button').forEach(x=>x.classList.toggle('active',x===b));loadSeries(selected,range)}));
 $('#market-settings').addEventListener('click',openSettings);$('#settings-close').addEventListener('click',closeSettings);$('#settings-backdrop').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSettings()});$('#connect-market').addEventListener('click',connectMarket);
-$('#clear-key').addEventListener('click',()=>{apiKey='';sessionStorage.removeItem('papertrade-market-key');quotes={};seriesCache={};$('#settings-status').textContent='密钥和本次会话报价已清除';renderAll()});
+$('#clear-key').addEventListener('click',()=>{apiKey='';sessionStorage.removeItem('papertrade-market-key');quotes={};localStorage.removeItem('papertrade-quotes');seriesCache={};$('#settings-status').textContent='密钥和本次会话报价已清除';renderAll()});
 $('#reset-button').addEventListener('click',()=>{if(confirm('确定重置模拟账户吗？这会清除现金、持仓、订单及交易记录。')){state={cash:initialCash,positions:{},watchlist:['NVDA','AAPL'],trades:[],orders:[]};save();renderAll();toast('模拟账户已重置')}});
 $('#mobile-account').addEventListener('click',()=>toast('总资产 '+fmt(totalValue())+' · 可用现金 '+fmt(availableCash())));
 document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#search-input').focus()}if(e.key==='Escape'){closeSettings();$('#detail-panel').classList.remove('mobile-open')}});
