@@ -12,7 +12,7 @@ const stocks = [
 ];
 const indices=[{symbol:'上证指数',price:'3,386.42',change:.62},{symbol:'深证成指',price:'10,623.78',change:.84},{symbol:'创业板指',price:'2,188.35',change:-.18},{symbol:'科创50',price:'1,024.71',change:1.16}];
 const initialCash=100000;
-let state={cash:initialCash,positions:{},watchlist:['600519','300750'],trades:[],day:localDay()};let selected='600519',filter='all',side='buy',range='1D';
+let state={cash:initialCash,positions:{},watchlist:['600519','300750'],trades:[],day:localDay()};let selected='600036',filter='all',side='buy',range='1D';
 function localDay(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 try{const saved=JSON.parse(localStorage.getItem('papertrade-ashare-state'));if(saved&&typeof saved.cash==='number')state={...state,...saved};}catch{}
 if(!state.day)state.day=localDay();if(state.day!==localDay())settleNewDay();
