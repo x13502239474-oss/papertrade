@@ -8,5 +8,6 @@
 .positive,.up{color:#f06a62;background:#f06a6219}.negative,.down{color:#27c98a;background:#27c98a19}
 .positive-text,.up-text{color:#f06a62}.negative-text,.down-text{color:#27c98a}
 .mini-chart.up path{stroke:#f06a62}.mini-chart.down path{stroke:#27c98a}
+.market-ticker .up{color:#f06a62;background:none}.market-ticker .down{color:#27c98a;background:none}
 .mobile-tag{font:8px var(--sans);color:#f0a49f;background:#302120;border:1px solid #50302e;border-radius:4px;padding:3px 5px;margin-left:1px}
 .order-label-row i{font-style:normal;color:#d3a35b;margin-left:4px}
