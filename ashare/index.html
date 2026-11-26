@@ -1,59 +1,524 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0d12" />
-  <meta name="description" content="A股模拟交易练习场，支持沪深股票行情、自选与虚拟买卖。" />
-  <title>PaperTrade · A股模拟</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta name="theme-color" content="#0b0e14" />
+  <meta name="description" content="PaperTrade A 股模拟交易终端：支持沪深京行情、自选分组、T+1 模拟委托与交易复盘。仅模拟交易，不连真实券商。" />
+  <title>PaperTrade · A股模拟交易终端</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <a class="brand" href="#"><span class="brand-mark">A</span><span>paper<span class="brand-light">trade</span></span></a>
-      <div class="side-label">交易工作台</div>
-      <button class="side-link active" data-view="market"><span class="nav-icon">▦</span>沪深行情</button>
-      <button class="side-link" data-view="portfolio"><span class="nav-icon">◫</span>我的持仓</button>
-      <button class="side-link" data-view="watchlist"><span class="nav-icon">☆</span>自选股票</button>
-      <div class="side-label side-label-spaced">账户</div>
-      <div class="account-mini"><div class="avatar">A股</div><div><strong>模拟账户</strong><small>人民币 · T+1 规则</small></div><span class="online-dot"></span></div>
-      <div class="sidebar-foot"><span class="pulse"></span>仅模拟交易 · 行情演示</div>
+  <div class="sim-banner" role="region" aria-label="模拟交易声明">
+    <span class="sim-tag">仅模拟交易</span>
+    <span class="sim-text">不连接真实券商 · 不提交真实委托 · 数据仅存于当前浏览器</span>
+    <a class="sim-link" href="../">美股模拟 ↗</a>
+  </div>
+
+  <div class="app-layout">
+    <aside class="sidebar" aria-label="主导航">
+      <div class="brand">
+        <span class="brand-badge">A</span>
+        <div>
+          <div class="brand-name">PaperTrade</div>
+          <div class="brand-sub">A 股模拟终端</div>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <button class="nav-btn active" data-tab="market" aria-current="page"><span class="nav-ico" aria-hidden="true">▤</span>行情</button>
+        <button class="nav-btn" data-tab="watch"><span class="nav-ico" aria-hidden="true">★</span>自选 <span class="badge-count" id="nav-watch-count">0</span></button>
+        <button class="nav-btn" data-tab="portfolio"><span class="nav-ico" aria-hidden="true">◫</span>持仓与复盘</button>
+        <button class="nav-btn" data-tab="settings"><span class="nav-ico" aria-hidden="true">⚙</span>数据源与设置</button>
+      </nav>
+
+      <div class="side-account">
+        <div class="side-acc-label">模拟总资产</div>
+        <div class="side-acc-val mono" id="side-total">¥100,000.00</div>
+        <div class="side-acc-row">
+          <span>可用</span>
+          <span class="mono" id="side-cash">¥100,000.00</span>
+        </div>
+        <div class="side-acc-row">
+          <span>累计盈亏</span>
+          <span class="mono" id="side-pnl">¥0.00 (0.00%)</span>
+        </div>
+      </div>
+
+      <div class="side-foot">
+        <div id="side-session-text">北京时间 --:--:--</div>
+        <div class="muted" id="side-calendar-note">沪深京 A 股规则</div>
+      </div>
     </aside>
 
-    <main class="main-content">
-      <header class="topbar"><div class="mobile-brand"><span class="brand-mark">A</span><b>papertrade</b><span class="mobile-tag">A股模拟</span></div><div class="breadcrumbs">交易终端 <span>/</span> <b id="breadcrumb-view">沪深行情</b></div><div class="top-actions"><div class="market-pill"><span class="pulse"></span>模拟市场 <span class="pill-divider"></span><span>沪 A · 深 A</span></div><button class="icon-button" id="reset-button" title="重置模拟账户" aria-label="重置账户">↻</button><div class="avatar top-avatar">A股</div></div></header>
+    <div class="main-column">
+      <header class="status-bar">
+        <div class="status-left">
+          <button class="status-pill" id="status-pill" type="button" title="查看数据源详情与切换">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-label">连接中</span>
+          </button>
+          <span class="status-meta" id="status-source">数据源加载中…</span>
+          <span class="status-meta mono" id="status-updated">更新 --:--:--</span>
+        </div>
+        <div class="status-right">
+          <span class="clock-chip mono" id="market-clock">北京时间 --:--:--</span>
+          <span class="phase-chip" id="market-phase">--</span>
+          <button class="icon-btn" id="btn-refresh" type="button" aria-label="刷新行情" title="立即刷新行情">↻</button>
+        </div>
+      </header>
 
-      <div class="content-wrap">
-        <section class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> CHINA A-SHARE PAPER TRADING</div><h1>早上好，投资练习生 <span class="wave">✳</span></h1><p class="subhead">从沪深市场开始，用虚拟资金练习每一笔交易。</p></div><div class="date-chip"><span class="calendar-icon">▣</span><span id="today-label">今日市场</span><span class="live-dot"></span></div></section>
-
-        <section class="stats-grid" aria-label="账户概况">
-          <article class="stat-card balance-card"><div class="stat-top"><span class="stat-label">账户总资产</span><span class="stat-icon">◈</span></div><div class="stat-value" id="total-value">¥100,000.00</div><div class="stat-bottom"><span class="stat-note">含现金与持仓市值</span><span class="stat-badge up" id="total-change">+0.00%</span></div><div class="card-glow"></div></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">可用资金</span><span class="stat-icon cash-icon">￥</span></div><div class="stat-value" id="cash-value">¥100,000.00</div><div class="stat-bottom"><span class="stat-note">可用于买入股票</span><span class="tiny-arrow">↗</span></div></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">持仓市值</span><span class="stat-icon position-icon">▤</span></div><div class="stat-value" id="invested-value">¥0.00</div><div class="stat-bottom"><span class="stat-note">当前持有资产</span><span class="tiny-arrow">↗</span></div></article>
-          <article class="stat-card"><div class="stat-top"><span class="stat-label">累计收益</span><span class="stat-icon profit-icon">⌁</span></div><div class="stat-value" id="profit-value">¥0.00</div><div class="stat-bottom"><span class="stat-note">相对初始资金</span><span class="stat-badge up" id="profit-percent">+0.00%</span></div></article>
-        </section>
-
-        <section class="market-strip"><div class="strip-title"><span class="pulse"></span>指数概览 <small>DEMO</small></div><div class="ticker-strip" id="ticker-strip"></div><div class="market-time">上海时间 <b id="market-clock">09:30:00</b></div></section>
-
-        <section class="workspace-grid">
-          <div class="panel stocks-panel"><div class="panel-heading"><div><div class="section-kicker">EXPLORE A-SHARES</div><h2>沪深股票</h2></div><button class="text-button" id="view-all">查看全部 <span>↗</span></button></div>
-            <div class="toolbar"><div class="tabs" id="stock-tabs"><button class="tab active" data-filter="all">全部</button><button class="tab" data-filter="gainer">涨幅榜</button><button class="tab" data-filter="loser">跌幅榜</button><button class="tab" data-filter="watch">我的自选 <span id="watch-count" class="tab-count">0</span></button></div><label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="搜索代码或股票名称" /><kbd>⌘ K</kbd></label></div>
-            <div class="table-wrap"><table><thead><tr><th>股票</th><th>最新价</th><th>涨跌幅</th><th class="chart-col">近况</th><th></th></tr></thead><tbody id="stock-table"></tbody></table></div><div class="table-foot"><span id="stock-count-label">显示 8 只沪深股票</span><span>演示行情 <span class="foot-dot">●</span></span></div>
-          </div>
-          <aside class="panel detail-panel" id="detail-panel"><div class="detail-head"><div class="section-kicker">个股详情</div><button class="close-detail" id="close-detail" aria-label="关闭详情">×</button></div><div class="stock-profile"><div class="company-logo" id="detail-logo">茅</div><div><h2 id="detail-name">贵州茅台</h2><div class="symbol-line"><span id="detail-symbol">600519</span><span class="market-tag">沪 A</span></div></div><button class="star-button" id="detail-star" aria-label="加入自选">☆</button></div><div class="detail-price-row"><div><div class="detail-price" id="detail-price">¥1,680.00</div><div class="detail-move up-text" id="detail-move">+¥19.50 (1.18%)</div></div><div class="range-select"><button class="active" data-range="1D">分时</button><button data-range="1W">5日</button><button data-range="1M">月</button><button data-range="1Y">年</button></div></div><div class="chart-wrap"><svg id="price-chart" viewBox="0 0 520 180" preserveAspectRatio="none" role="img" aria-label="股价走势"></svg><div class="chart-labels"><span>09:30</span><span>10:30</span><span>13:00</span><span>14:00</span><span>15:00</span></div></div><div class="detail-metrics"><div><span>今开</span><b id="detail-open">¥1,660.50</b></div><div><span>最高</span><b id="detail-high">¥1,691.20</b></div><div><span>最低</span><b id="detail-low">¥1,650.90</b></div><div><span>成交额</span><b id="detail-volume">18.6亿</b></div></div><div class="trade-box"><div class="trade-switch"><button class="active" data-side="buy">买入</button><button data-side="sell">卖出</button></div><div class="order-label-row"><span>委托数量 <i>买入 100 股起</i></span><span>可用 <b id="order-buying-power">¥100,000.00</b></span></div><div class="quantity-input"><button id="qty-minus" aria-label="减少数量">−</button><input id="quantity-input" inputmode="numeric" type="number" min="100" step="100" value="100" /><span>股</span><button id="qty-plus" aria-label="增加数量">＋</button></div><div class="order-total"><span>预估金额</span><b id="order-total">¥168,000.00</b></div><button class="trade-button buy-button" id="trade-button">买入 600519 <span>→</span></button><p class="trade-hint"><span>ⓘ</span> 模拟采用 A 股 100 股买入单位及 T+1 卖出规则。</p></div></aside>
-        </section>
-
-        <section class="panel holdings-panel"><div class="panel-heading"><div><div class="section-kicker">YOUR PORTFOLIO</div><h2>我的持仓</h2></div><button class="text-button" data-view="portfolio">持仓明细 <span>↗</span></button></div><div class="holdings-table-wrap"><table><thead><tr><th>股票</th><th>持有数量</th><th>可卖数量</th><th>成本价</th><th>当前价</th><th>市值</th><th>总收益</th></tr></thead><tbody id="holdings-table"></tbody></table></div><div class="empty-holdings" id="empty-holdings"><div class="empty-icon">◫</div><b>还没有持仓</b><span>选择一只股票，开始你的第一次模拟交易。</span></div></section>
-        <footer class="footer"><span>© 2025 PaperTrade</span><span class="disclaimer">演示行情 · T+1模拟 · 非投资建议</span><span>练习交易，保持好奇 <i>✳</i></span></footer>
+      <div class="alert-strip" id="fault-banner" hidden role="alert">
+        <span id="fault-text">行情暂不可用</span>
+        <div class="alert-actions">
+          <button class="btn-xs" id="btn-retry-feed" type="button">重试</button>
+          <button class="btn-xs" id="btn-use-demo" type="button">切换演示快照</button>
+        </div>
       </div>
-    </main>
+
+      <div class="alert-strip warn" id="clock-offset-banner" hidden role="status">
+        <span id="clock-offset-text">练习时间模式已开启</span>
+        <button class="btn-xs" id="btn-reset-clock" type="button">恢复真实时间</button>
+      </div>
+
+      <main class="workspace">
+        <!-- ===================== 视图 1：行情首页 ===================== -->
+        <section class="view active" id="view-market" aria-label="行情首页">
+          <div class="indices-strip" id="indices-strip" aria-label="主要指数">
+            <div class="idx-card skeleton"></div>
+            <div class="idx-card skeleton"></div>
+            <div class="idx-card skeleton"></div>
+            <div class="idx-card skeleton"></div>
+          </div>
+
+          <div class="market-toolbar">
+            <label class="search-wrap" aria-label="搜索股票">
+              <span class="search-ico" aria-hidden="true">⌕</span>
+              <input id="market-search" type="search" autocomplete="off" placeholder="搜索代码 / 简称 / 拼音（如 600519、茅台、ndsd）" />
+              <button class="clear-btn" id="search-clear" type="button" aria-label="清空搜索" hidden>×</button>
+            </label>
+            <div class="board-chips" id="board-chips" role="tablist" aria-label="市场板块筛选">
+              <button class="chip active" data-board="all" role="tab" aria-selected="true">沪深京</button>
+              <button class="chip" data-board="sh_main" role="tab">沪主板</button>
+              <button class="chip" data-board="sz_main" role="tab">深主板</button>
+              <button class="chip" data-board="chinext" role="tab">创业板</button>
+              <button class="chip" data-board="star" role="tab">科创板</button>
+              <button class="chip" data-board="bse" role="tab">北交所</button>
+            </div>
+            <div class="sort-bar" id="sort-bar" aria-label="排序方式">
+              <button class="sort-btn" data-sort="changePct" data-asc="0">涨幅榜</button>
+              <button class="sort-btn" data-sort="changePct" data-asc="1">跌幅榜</button>
+              <button class="sort-btn active" data-sort="amount" data-asc="0">成交额 ↓</button>
+              <button class="sort-btn" data-sort="turnoverRate" data-asc="0">换手率</button>
+            </div>
+          </div>
+
+          <div class="card table-card">
+            <div class="table-scroll">
+              <table class="quote-table">
+                <thead>
+                  <tr>
+                    <th>股票</th>
+                    <th class="num">最新价</th>
+                    <th class="num">涨跌幅</th>
+                    <th class="num col-md">涨跌额</th>
+                    <th class="num">成交额</th>
+                    <th class="num col-md">换手率</th>
+                    <th class="num col-lg">市盈率</th>
+                    <th class="act">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="market-tbody">
+                  <tr><td colspan="8" class="empty-cell">正在加载行情数据…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-footer">
+              <span id="market-count" class="muted">显示 0 只</span>
+              <div class="pager">
+                <button class="btn-xs" id="btn-prev-page" type="button" disabled>上一页</button>
+                <span class="mono muted" id="page-indicator">第 1 页</span>
+                <button class="btn-xs" id="btn-next-page" type="button">下一页</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================== 视图 2：自选管理 ===================== -->
+        <section class="view" id="view-watch" aria-label="自选股票">
+          <div class="watch-head">
+            <div class="group-tabs" id="group-tabs" role="tablist" aria-label="自选分组"></div>
+            <div class="group-actions">
+              <button class="btn-xs" id="btn-add-group" type="button">+ 新建分组</button>
+              <button class="btn-xs" id="btn-rename-group" type="button">重命名</button>
+              <button class="btn-xs danger" id="btn-delete-group" type="button">删除分组</button>
+            </div>
+          </div>
+
+          <div class="watch-tools">
+            <label class="search-wrap" aria-label="筛选自选">
+              <span class="search-ico" aria-hidden="true">⌕</span>
+              <input id="watch-search" type="search" placeholder="在当前分组中搜索代码或名称" />
+            </label>
+            <select id="watch-sort" class="select-sm" aria-label="自选排序">
+              <option value="manual">手动排序</option>
+              <option value="changePct-desc">涨跌幅由高到低</option>
+              <option value="changePct-asc">涨跌幅由低到高</option>
+              <option value="amount-desc">成交额由高到低</option>
+            </select>
+          </div>
+
+          <div class="card table-card">
+            <div class="table-scroll">
+              <table class="quote-table">
+                <thead>
+                  <tr>
+                    <th>股票</th>
+                    <th class="num">最新价</th>
+                    <th class="num">涨跌幅</th>
+                    <th class="num col-md">成交额</th>
+                    <th class="act">排序 / 移除</th>
+                  </tr>
+                </thead>
+                <tbody id="watch-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================== 视图 3：持仓与复盘 ===================== -->
+        <section class="view" id="view-portfolio" aria-label="持仓与复盘">
+          <div class="account-grid">
+            <article class="kpi-card primary">
+              <div class="kpi-label">总资产（含冻结）</div>
+              <div class="kpi-value mono" id="kpi-total">¥100,000.00</div>
+              <div class="kpi-sub">
+                <span>累计盈亏</span>
+                <b class="mono" id="kpi-total-pnl">¥0.00 (0.00%)</b>
+              </div>
+            </article>
+            <article class="kpi-card">
+              <div class="kpi-label">当日盈亏（估算）</div>
+              <div class="kpi-value mono" id="kpi-day-pnl">¥0.00</div>
+              <div class="kpi-sub"><span>浮动盈亏</span><b class="mono" id="kpi-float-pnl">¥0.00</b></div>
+            </article>
+            <article class="kpi-card">
+              <div class="kpi-label">可用资金</div>
+              <div class="kpi-value mono" id="kpi-cash">¥100,000.00</div>
+              <div class="kpi-sub"><span>冻结资金</span><b class="mono" id="kpi-frozen">¥0.00</b></div>
+            </article>
+            <article class="kpi-card">
+              <div class="kpi-label">持仓市值</div>
+              <div class="kpi-value mono" id="kpi-mv">¥0.00</div>
+              <div class="kpi-sub"><span>已实现盈亏</span><b class="mono" id="kpi-realized">¥0.00</b></div>
+            </article>
+          </div>
+
+          <div class="card chart-card">
+            <div class="card-head">
+              <h2>资产曲线</h2>
+              <span class="muted">按交易日收盘/最新估值自动记录</span>
+            </div>
+            <div id="equity-chart"></div>
+          </div>
+
+          <div class="sub-tabs" id="portfolio-tabs" role="tablist">
+            <button class="sub-tab active" data-ptab="positions" role="tab" aria-selected="true">当前持仓</button>
+            <button class="sub-tab" data-ptab="orders" role="tab">模拟委托 <span class="badge-count" id="pending-count">0</span></button>
+            <button class="sub-tab" data-ptab="fills" role="tab">成交与复盘</button>
+          </div>
+
+          <div class="card table-card" id="ptab-positions">
+            <div class="table-scroll">
+              <table class="quote-table">
+                <thead>
+                  <tr>
+                    <th>股票</th>
+                    <th class="num">持仓 / 可卖</th>
+                    <th class="num">成本 / 现价</th>
+                    <th class="num">市值</th>
+                    <th class="num">浮动盈亏</th>
+                    <th class="act">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="positions-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card table-card" id="ptab-orders" hidden>
+            <div class="table-scroll">
+              <table class="quote-table">
+                <thead>
+                  <tr>
+                    <th>时间 / 标的</th>
+                    <th>方向 / 类型</th>
+                    <th class="num">委托价</th>
+                    <th class="num">数量</th>
+                    <th>状态</th>
+                    <th class="act">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="ptab-fills" hidden>
+            <div class="card review-bar">
+              <div class="date-filter">
+                <label>起始日 <input type="date" id="filter-from" /></label>
+                <label>截止日 <input type="date" id="filter-to" /></label>
+                <button class="btn-xs" id="btn-clear-dates" type="button">全部日期</button>
+              </div>
+              <div class="review-grid" id="review-stats"></div>
+            </div>
+            <div class="card table-card">
+              <div class="table-scroll">
+                <table class="quote-table">
+                  <thead>
+                    <tr>
+                      <th>成交时间 / 行情时间</th>
+                      <th>标的 / 方向</th>
+                      <th class="num">成交价</th>
+                      <th class="num">数量 / 金额</th>
+                      <th class="num">费用</th>
+                      <th class="num">已实现盈亏</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fills-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================== 视图 4：数据源与设置 ===================== -->
+        <section class="view" id="view-settings" aria-label="数据源与设置">
+          <div class="settings-grid">
+            <article class="card settings-card">
+              <h2>行情数据源配置</h2>
+              <p class="muted">前端绝不存放任何 API Key。若需接入 Tushare Pro / iTick 等需密钥数据源，请部署本仓库 <code>worker/</code> 目录中的 Cloudflare Worker 代理并填写代理地址。</p>
+              <div class="field">
+                <label for="cfg-provider">数据模式</label>
+                <select id="cfg-provider">
+                  <option value="public">公开免费行情（腾讯五档 + 新浪榜单，浏览器直连，有延迟）</option>
+                  <option value="proxy">自定义后端代理（Cloudflare Worker，支持 Tushare/iTick）</option>
+                  <option value="demo">静态演示快照（离线参考，非实时，不含 K 线）</option>
+                </select>
+              </div>
+              <div class="field" id="proxy-url-field">
+                <label for="cfg-proxy-base">代理服务地址（Worker URL）</label>
+                <input id="cfg-proxy-base" type="url" placeholder="https://papertrade-ashare-proxy.your-subdomain.workers.dev" />
+              </div>
+              <div class="btn-row">
+                <button class="btn primary" id="btn-save-provider" type="button">保存并刷新行情</button>
+                <button class="btn" id="btn-test-fault" type="button">模拟行情故障</button>
+              </div>
+              <div class="info-box" id="provider-status-box"></div>
+            </article>
+
+            <article class="card settings-card">
+              <h2>交易费用参数（练习配置）</h2>
+              <p class="muted">以下费率仅为用户可配置的练习参数，不代表任何券商实际收费标准。</p>
+              <div class="form-2col">
+                <div class="field">
+                  <label for="cfg-comm-rate">佣金费率（如 0.00025 = 万2.5）</label>
+                  <input id="cfg-comm-rate" type="number" step="0.00001" min="0" />
+                </div>
+                <div class="field">
+                  <label for="cfg-comm-min">最低佣金（元）</label>
+                  <input id="cfg-comm-min" type="number" step="0.5" min="0" />
+                </div>
+                <div class="field">
+                  <label for="cfg-stamp-rate">印花税率（仅卖出，0.0005 = 万5）</label>
+                  <input id="cfg-stamp-rate" type="number" step="0.00005" min="0" />
+                </div>
+                <div class="field">
+                  <label for="cfg-transfer-rate">过户费率（0.00001 = 十万分之1）</label>
+                  <input id="cfg-transfer-rate" type="number" step="0.000005" min="0" />
+                </div>
+              </div>
+              <label class="check-row">
+                <input type="checkbox" id="cfg-offhours" />
+                <span>允许非交易时段练习成交（默认关闭；开启后可随时按最新可得行情模拟成交，便于盘后练习与验证）</span>
+              </label>
+              <div class="btn-row">
+                <button class="btn primary" id="btn-save-fees" type="button">保存交易参数</button>
+                <button class="btn" id="btn-advance-day" type="button">模拟推进到下一交易日（验证 T+1）</button>
+              </div>
+            </article>
+
+            <article class="card settings-card">
+              <h2>本地数据与备份恢复</h2>
+              <p class="muted">模拟账户（资金、持仓、委托、成交、自选分组）仅保存在当前浏览器的 <code>localStorage</code> 中，清除浏览器数据或更换设备将无法读取。建议定期导出 JSON 备份。</p>
+              <div class="btn-row">
+                <button class="btn" id="btn-export" type="button">导出账户备份 (.json)</button>
+                <label class="btn file-btn">导入账户备份<input id="input-import" type="file" accept="application/json,.json" hidden /></label>
+                <button class="btn" id="btn-toggle-theme" type="button">切换深/浅主题</button>
+                <button class="btn danger" id="btn-reset-account" type="button">重置模拟账户</button>
+              </div>
+            </article>
+
+            <article class="card settings-card">
+              <h2>模拟规则与定价假设</h2>
+              <ul class="rule-list">
+                <li><strong>板块交易单位</strong>：沪深主板与创业板买入须为 100 股整数倍；科创板买入不少于 200 股，超出部分 1 股递增；北交所买入不少于 100 股，超出部分 1 股递增。零股须一次性卖出。</li>
+                <li><strong>T+1 制度</strong>：当日买入的股份计入锁定批次，次一交易日自动解锁为可卖数量；内置 2025–2026 年上交所休市日历，其他年份按工作日简化处理并给出提示。</li>
+                <li><strong>涨跌幅限制</strong>：主板（含 2026-07-06 起风险警示股）10%，创业板与科创板 20%，北交所 30%；优先采用数据源返回的涨跌停价。</li>
+                <li><strong>成交定价假设</strong>：本应用无逐笔撮合引擎，模拟买入参考卖一价（无盘口时取最新价），卖出参考买一价（无盘口时取最新价），不模拟排队与部分成交。</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- ===================== 个股详情与模拟下单面板 ===================== -->
+    <aside class="detail-drawer" id="detail-drawer" aria-label="个股详情与模拟下单" aria-hidden="true">
+      <div class="detail-header">
+        <button class="icon-btn back-btn" id="detail-close" type="button" aria-label="返回列表">←</button>
+        <div class="detail-title">
+          <div class="detail-name-row">
+            <h2 id="d-name">选择股票</h2>
+            <span class="board-tag" id="d-board">--</span>
+            <span class="st-tag" id="d-risk" hidden></span>
+          </div>
+          <div class="detail-code-row mono muted">
+            <span id="d-symbol">------</span>
+            <span id="d-source-time">--</span>
+          </div>
+        </div>
+        <button class="star-btn" id="d-star" type="button" aria-label="加入或移除自选">☆ 自选</button>
+      </div>
+
+      <div class="detail-body">
+        <div class="quote-hero">
+          <div>
+            <div class="hero-price mono" id="d-price">—</div>
+            <div class="hero-change mono" id="d-change">—</div>
+          </div>
+          <div class="hero-limits mono">
+            <div><span class="muted">涨停</span> <b class="up" id="d-limit-up">—</b></div>
+            <div><span class="muted">跌停</span> <b class="down" id="d-limit-down">—</b></div>
+          </div>
+        </div>
+
+        <div class="metrics-grid" id="d-metrics"></div>
+
+        <div class="chart-panel">
+          <div class="tf-tabs" id="tf-tabs" role="tablist" aria-label="图表周期">
+            <button class="tf-btn active" data-tf="1D" role="tab">分时</button>
+            <button class="tf-btn" data-tf="5D" role="tab">5日</button>
+            <button class="tf-btn" data-tf="D" role="tab">日K</button>
+            <button class="tf-btn" data-tf="W" role="tab">周K</button>
+            <button class="tf-btn" data-tf="M" role="tab">月K</button>
+            <button class="tf-btn" data-tf="60m" role="tab">60分</button>
+          </div>
+          <div class="chart-box" id="d-chart"></div>
+        </div>
+
+        <div class="book-panel" id="d-book-panel" hidden>
+          <div class="book-head">
+            <span>五档盘口（点击价格填入委托价）</span>
+            <span class="muted" id="d-book-delay">快照存在延迟</span>
+          </div>
+          <div class="book-grid">
+            <div class="book-side" id="d-bids"></div>
+            <div class="book-side" id="d-asks"></div>
+          </div>
+        </div>
+
+        <!-- 模拟下单区 -->
+        <div class="ticket-panel" aria-label="创建模拟委托">
+          <div class="ticket-tabs">
+            <button class="t-side active buy" data-side="buy" type="button">模拟买入</button>
+            <button class="t-side sell" data-side="sell" type="button">模拟卖出</button>
+          </div>
+
+          <div class="ticket-type-row">
+            <div class="seg" id="order-type-seg">
+              <button class="seg-btn active" data-otype="limit" type="button">限价委托</button>
+              <button class="seg-btn" data-otype="market" type="button">市价模拟</button>
+            </div>
+            <span class="muted small" id="t-rule-hint">100股整数倍</span>
+          </div>
+
+          <div class="ticket-row" id="price-input-row">
+            <label for="t-price">委托价格</label>
+            <div class="stepper">
+              <button type="button" id="t-price-minus" aria-label="减 0.01 元">−</button>
+              <input id="t-price" type="number" step="0.01" min="0.01" inputmode="decimal" />
+              <button type="button" id="t-price-plus" aria-label="加 0.01 元">+</button>
+            </div>
+          </div>
+
+          <div class="ticket-row">
+            <label for="t-qty">委托数量（股）</label>
+            <div class="stepper">
+              <button type="button" id="t-qty-minus" aria-label="减少数量">−</button>
+              <input id="t-qty" type="number" step="100" min="100" inputmode="numeric" value="100" />
+              <button type="button" id="t-qty-plus" aria-label="增加数量">+</button>
+            </div>
+          </div>
+
+          <div class="quick-qty" id="quick-qty">
+            <button type="button" data-frac="0.25">1/4</button>
+            <button type="button" data-frac="0.5">1/2</button>
+            <button type="button" data-frac="1">全仓/可卖</button>
+          </div>
+
+          <div class="ticket-summary">
+            <div><span class="muted" id="t-avail-label">可用资金</span><b class="mono" id="t-avail-val">—</b></div>
+            <div><span class="muted">估算成交额</span><b class="mono" id="t-est-amt">—</b></div>
+            <div><span class="muted">估算费用</span><b class="mono" id="t-est-fee">—</b></div>
+          </div>
+
+          <div class="ticket-msgs" id="t-msgs" aria-live="polite"></div>
+
+          <button class="btn submit-btn buy" id="btn-submit-order" type="button">创建模拟买入委托</button>
+          <p class="ticket-note">仅模拟练习：按卖一/买一或最新价估算成交，非真实券商委托与撮合。</p>
+        </div>
+      </div>
+    </aside>
   </div>
-  <nav class="mobile-nav"><button class="active" data-view="market"><span>▦</span>行情</button><button data-view="portfolio"><span>◫</span>持仓</button><button data-view="watchlist"><span>☆</span>自选</button><button id="mobile-account"><span>◉</span>账户</button></nav>
+
+  <!-- 移动端底部导航 -->
+  <nav class="mobile-nav" aria-label="移动端导航">
+    <button class="mnav-btn active" data-tab="market"><span aria-hidden="true">▤</span><span>行情</span></button>
+    <button class="mnav-btn" data-tab="watch"><span aria-hidden="true">★</span><span>自选</span></button>
+    <button class="mnav-btn" data-tab="portfolio"><span aria-hidden="true">◫</span><span>持仓</span></button>
+    <button class="mnav-btn" data-tab="settings"><span aria-hidden="true">⚙</span><span>设置</span></button>
+  </nav>
+
+  <!-- 模拟下单二次确认对话框 -->
+  <div class="modal-backdrop" id="confirm-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="modal-head">
+        <h3 id="confirm-title">确认模拟委托</h3>
+        <button class="icon-btn" id="confirm-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" id="confirm-body"></div>
+      <div class="modal-foot">
+        <button class="btn" id="confirm-cancel" type="button">取消</button>
+        <button class="btn primary" id="confirm-ok" type="button">确认模拟下单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自选分组选择对话框 -->
+  <div class="modal-backdrop" id="group-modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="group-modal-title">
+      <div class="modal-head">
+        <h3 id="group-modal-title">选择自选分组</h3>
+        <button class="icon-btn" id="group-modal-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" id="group-modal-body"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="app.js"></script>
+
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
