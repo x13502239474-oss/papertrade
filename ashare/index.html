@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="description" content="A股模拟交易练习场，支持沪深股票行情、自选与虚拟买卖。" />
+  <title>PaperTrade · A股模拟</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span class="brand-mark">A</span><span>paper<span class="brand-light">trade</span></span></a>
+      <div class="side-label">交易工作台</div>
+      <button class="side-link active" data-view="market"><span class="nav-icon">▦</span>沪深行情</button>
+      <button class="side-link" data-view="portfolio"><span class="nav-icon">◫</span>我的持仓</button>
+      <button class="side-link" data-view="watchlist"><span class="nav-icon">☆</span>自选股票</button>
+      <div class="side-label side-label-spaced">账户</div>
+      <div class="account-mini"><div class="avatar">A股</div><div><strong>模拟账户</strong><small>人民币 · T+1 规则</small></div><span class="online-dot"></span></div>
+      <div class="sidebar-foot"><span class="pulse"></span>仅模拟交易 · 行情演示</div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar"><div class="mobile-brand"><span class="brand-mark">A</span><b>papertrade</b><span class="mobile-tag">A股模拟</span></div><div class="breadcrumbs">交易终端 <span>/</span> <b id="breadcrumb-view">沪深行情</b></div><div class="top-actions"><div class="market-pill"><span class="pulse"></span>模拟市场 <span class="pill-divider"></span><span>沪 A · 深 A</span></div><button class="icon-button" id="reset-button" title="重置模拟账户" aria-label="重置账户">↻</button><div class="avatar top-avatar">A股</div></div></header>
+
+      <div class="content-wrap">
+        <section class="welcome-row"><div><div class="eyebrow"><span class="eyebrow-line"></span> CHINA A-SHARE PAPER TRADING</div><h1>早上好，投资练习生 <span class="wave">✳</span></h1><p class="subhead">从沪深市场开始，用虚拟资金练习每一笔交易。</p></div><div class="date-chip"><span class="calendar-icon">▣</span><span id="today-label">今日市场</span><span class="live-dot"></span></div></section>
+
+        <section class="stats-grid" aria-label="账户概况">
+          <article class="stat-card balance-card"><div class="stat-top"><span class="stat-label">账户总资产</span><span class="stat-icon">◈</span></div><div class="stat-value" id="total-value">¥100,000.00</div><div class="stat-bottom"><span class="stat-note">含现金与持仓市值</span><span class="stat-badge up" id="total-change">+0.00%</span></div><div class="card-glow"></div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">可用资金</span><span class="stat-icon cash-icon">￥</span></div><div class="stat-value" id="cash-value">¥100,000.00</div><div class="stat-bottom"><span class="stat-note">可用于买入股票</span><span class="tiny-arrow">↗</span></div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">持仓市值</span><span class="stat-icon position-icon">▤</span></div><div class="stat-value" id="invested-value">¥0.00</div><div class="stat-bottom"><span class="stat-note">当前持有资产</span><span class="tiny-arrow">↗</span></div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">累计收益</span><span class="stat-icon profit-icon">⌁</span></div><div class="stat-value" id="profit-value">¥0.00</div><div class="stat-bottom"><span class="stat-note">相对初始资金</span><span class="stat-badge up" id="profit-percent">+0.00%</span></div></article>
+        </section>
+
+        <section class="market-strip"><div class="strip-title"><span class="pulse"></span>指数概览 <small>DEMO</small></div><div class="ticker-strip" id="ticker-strip"></div><div class="market-time">上海时间 <b id="market-clock">09:30:00</b></div></section>
+
+        <section class="workspace-grid">
+          <div class="panel stocks-panel"><div class="panel-heading"><div><div class="section-kicker">EXPLORE A-SHARES</div><h2>沪深股票</h2></div><button class="text-button" id="view-all">查看全部 <span>↗</span></button></div>
+            <div class="toolbar"><div class="tabs" id="stock-tabs"><button class="tab active" data-filter="all">全部</button><button class="tab" data-filter="gainer">涨幅榜</button><button class="tab" data-filter="loser">跌幅榜</button><button class="tab" data-filter="watch">我的自选 <span id="watch-count" class="tab-count">0</span></button></div><label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="搜索代码或股票名称" /><kbd>⌘ K</kbd></label></div>
+            <div class="table-wrap"><table><thead><tr><th>股票</th><th>最新价</th><th>涨跌幅</th><th class="chart-col">近况</th><th></th></tr></thead><tbody id="stock-table"></tbody></table></div><div class="table-foot"><span id="stock-count-label">显示 8 只沪深股票</span><span>演示行情 <span class="foot-dot">●</span></span></div>
+          </div>
+          <aside class="panel detail-panel" id="detail-panel"><div class="detail-head"><div class="section-kicker">个股详情</div><button class="close-detail" id="close-detail" aria-label="关闭详情">×</button></div><div class="stock-profile"><div class="company-logo" id="detail-logo">茅</div><div><h2 id="detail-name">贵州茅台</h2><div class="symbol-line"><span id="detail-symbol">600519</span><span class="market-tag">沪 A</span></div></div><button class="star-button" id="detail-star" aria-label="加入自选">☆</button></div><div class="detail-price-row"><div><div class="detail-price" id="detail-price">¥1,680.00</div><div class="detail-move up-text" id="detail-move">+¥19.50 (1.18%)</div></div><div class="range-select"><button class="active" data-range="1D">分时</button><button data-range="1W">5日</button><button data-range="1M">月</button><button data-range="1Y">年</button></div></div><div class="chart-wrap"><svg id="price-chart" viewBox="0 0 520 180" preserveAspectRatio="none" role="img" aria-label="股价走势"></svg><div class="chart-labels"><span>09:30</span><span>10:30</span><span>13:00</span><span>14:00</span><span>15:00</span></div></div><div class="detail-metrics"><div><span>今开</span><b id="detail-open">¥1,660.50</b></div><div><span>最高</span><b id="detail-high">¥1,691.20</b></div><div><span>最低</span><b id="detail-low">¥1,650.90</b></div><div><span>成交额</span><b id="detail-volume">18.6亿</b></div></div><div class="trade-box"><div class="trade-switch"><button class="active" data-side="buy">买入</button><button data-side="sell">卖出</button></div><div class="order-label-row"><span>委托数量 <i>买入 100 股起</i></span><span>可用 <b id="order-buying-power">¥100,000.00</b></span></div><div class="quantity-input"><button id="qty-minus" aria-label="减少数量">−</button><input id="quantity-input" inputmode="numeric" type="number" min="100" step="100" value="100" /><span>股</span><button id="qty-plus" aria-label="增加数量">＋</button></div><div class="order-total"><span>预估金额</span><b id="order-total">¥168,000.00</b></div><button class="trade-button buy-button" id="trade-button">买入 600519 <span>→</span></button><p class="trade-hint"><span>ⓘ</span> 模拟采用 A 股 100 股买入单位及 T+1 卖出规则。</p></div></aside>
+        </section>
+
+        <section class="panel holdings-panel"><div class="panel-heading"><div><div class="section-kicker">YOUR PORTFOLIO</div><h2>我的持仓</h2></div><button class="text-button" data-view="portfolio">持仓明细 <span>↗</span></button></div><div class="holdings-table-wrap"><table><thead><tr><th>股票</th><th>持有数量</th><th>可卖数量</th><th>成本价</th><th>当前价</th><th>市值</th><th>总收益</th></tr></thead><tbody id="holdings-table"></tbody></table></div><div class="empty-holdings" id="empty-holdings"><div class="empty-icon">◫</div><b>还没有持仓</b><span>选择一只股票，开始你的第一次模拟交易。</span></div></section>
+        <footer class="footer"><span>© 2025 PaperTrade</span><span class="disclaimer">演示行情 · T+1模拟 · 非投资建议</span><span>练习交易，保持好奇 <i>✳</i></span></footer>
+      </div>
+    </main>
+  </div>
+  <nav class="mobile-nav"><button class="active" data-view="market"><span>▦</span>行情</button><button data-view="portfolio"><span>◫</span>持仓</button><button data-view="watchlist"><span>☆</span>自选</button><button id="mobile-account"><span>◉</span>账户</button></nav>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
