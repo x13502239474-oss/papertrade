@@ -3,7 +3,7 @@ const stocks = [
   {symbol:'300750',name:'宁德时代',market:'深 A',price:198.35,change:2.36,open:193.40,high:199.80,low:192.10,volume:'32.1亿',tone:'blue'},
   {symbol:'601318',name:'中国平安',market:'沪 A',price:48.62,change:-0.74,open:49.10,high:49.28,low:48.31,volume:'21.5亿',tone:'red'},
   {symbol:'600036',name:'招商银行',market:'沪 A',price:36.84,change:0.55,open:36.50,high:37.02,low:36.32,volume:'12.9亿',tone:'blue'},
-  {symbol:'688981',name:'中芯国际',market:'科创板',price:52.70,change:3.12,open:51.10,high:53.20,low:50.86,volume:'44.8亿',tone:'purple'},
+  {symbol:'000858',name:'五粮液',market:'深 A',price:126.42,change:2.31,open:123.75,high:127.10,low:122.98,volume:'19.6亿',tone:'purple'},
   {symbol:'300059',name:'东方财富',market:'创业板',price:14.86,change:-1.46,open:15.08,high:15.16,low:14.72,volume:'36.4亿',tone:'orange'},
   {symbol:'002594',name:'比亚迪',market:'深 A',price:242.18,change:1.73,open:237.60,high:243.50,low:236.85,volume:'28.7亿',tone:'red'},
   {symbol:'601012',name:'隆基绿能',market:'沪 A',price:19.25,change:-0.92,open:19.43,high:19.54,low:19.12,volume:'9.3亿',tone:'green'},
